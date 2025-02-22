@@ -16,12 +16,14 @@ CREATE TABLE IF NOT EXISTS organizations (
     contact_email VARCHAR(255) NOT NULL,
     contact_phone VARCHAR(50) NOT NULL,
     tira_license VARCHAR(255),
-    contact_person_name VARCHAR(255) NOT NULL,
-    contact_person_role VARCHAR(255) NOT NULL,
+    contact_person_first_name VARCHAR(255) NOT NULL,
+    contact_person_last_name VARCHAR(255) NOT NULL,
+    contact_person_role VARCHAR(255),
     contact_person_email VARCHAR(255) NOT NULL,
-    contact_person_phone VARCHAR(50) NOT NULL,
+    contact_person_phone VARCHAR(255) NOT NULL,
     admin_username VARCHAR(255) UNIQUE NOT NULL,
-    admin_email VARCHAR(255) NOT NULL,
-    insurance_type VARCHAR(255),  -- Stored as a string
-    payment_method VARCHAR(255)    -- Stored as a string
+    admin_email VARCHAR(255) UNIQUE NOT NULL,
+    insurance_types VARCHAR(255),  -- Stored as a string
+    payment_methods VARCHAR(255),    -- Stored as a string
+    account_status VARCHAR(50) DEFAULT 'pending'
 );

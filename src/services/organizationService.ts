@@ -7,14 +7,15 @@ export const createOrganization = async (
     contact_email: string,
     contact_phone: string,
     tira_license?: string,
-    contact_person_name?: string,
+    contact_person_first_name?: string,
+    contact_person_last_name?: string,
     contact_person_role?: string,
     contact_person_email?: string,
     contact_person_phone?: string,
     admin_username?: string,
     admin_email?: string,
-    insurance_type?: string,
-    payment_method?: string
+    insurance_types?: string[],  // Array of insurance types (strings)
+    payment_methods?: { method: string; details: object }[] 
 ) => {
     const client = await pool.connect();
 
@@ -25,16 +26,17 @@ export const createOrganization = async (
         const orgQuery = `
             INSERT INTO organizations 
             (legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license, 
-            contact_person_name, contact_person_role, contact_person_email, contact_person_phone, 
-            admin_username, admin_email, insurance_type, payment_method) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+            contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_email, contact_person_phone, 
+            admin_username, admin_email, insurance_types, payment_methods) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
             RETURNING id;
         `;
 
         const orgValues = [
             legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license || null,
-            contact_person_name || null, contact_person_role || null, contact_person_email || null, contact_person_phone || null,
-            admin_username || null, admin_email || null, insurance_type || null, payment_method || null
+            contact_person_first_name, contact_person_last_name, contact_person_role || null, contact_person_email, contact_person_phone,
+            admin_username, admin_email, JSON.stringify(insurance_types),  // Convert insurance_type array to JSON string
+            JSON.stringify(payment_methods)
         ];
 
         const orgResult = await client.query(orgQuery, orgValues);

@@ -16,6 +16,7 @@ services:
       - bimasoft-network
 
   backend:
+    user: node
     image: node:16 # Replace with your preferred Node.js version
     container_name: bimasoft-backend
     working_dir: /usr/src/app
@@ -24,16 +25,16 @@ services:
     depends_on:
       - db
     environment:
-      DB_HOST: ${POSTGRES_HOST}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: ${POSTGRES_DB}
-      DB_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PORT: ${POSTGRES_PORT}
     ports:
       - "3000:3000"
     networks:
       - bimasoft-network
-    command: npm start  # or your start command for Node.js
+    command: npm start
 
 networks:
   bimasoft-network:

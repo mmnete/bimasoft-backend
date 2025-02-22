@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.post('/add-organization', addOrganization);
 // router.post('/update-organization', updateOrganization);
-router.post('/remove-organization', removeOrganization);
+router.delete('/remove-organization/:id', removeOrganization);
 
 export default router;
