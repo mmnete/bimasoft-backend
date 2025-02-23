@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     contact_person_phone VARCHAR(255) NOT NULL,
     admin_username VARCHAR(255) UNIQUE NOT NULL,
     admin_email VARCHAR(255) UNIQUE NOT NULL,
+    physical_address VARCHAR(255) NOT NULL,
     insurance_types VARCHAR(255),  -- Stored as a string
     payment_methods VARCHAR(255),    -- Stored as a string
     account_status VARCHAR(50) DEFAULT 'pending'

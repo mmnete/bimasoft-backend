@@ -17,6 +17,7 @@ export const addOrganization = async (req: Request, res: Response) => {
             contact_person_phone,
             admin_username,
             admin_email,
+            physical_address,
             insurance_types,
             payment_methods
         } = req.body;
@@ -47,6 +48,7 @@ export const addOrganization = async (req: Request, res: Response) => {
             contact_person_phone,
             admin_username,
             admin_email,
+            physical_address,
             insurance_types,
             payment_methods
         );

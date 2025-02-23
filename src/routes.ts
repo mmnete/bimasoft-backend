@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { addOrganization, removeOrganization } from './controller/organizationController';
+import { searchCompany } from './controller/scrapeCompanies';
 
 const router = express.Router();
 const API_KEY: string | undefined = process.env.API_KEY;
@@ -22,5 +23,7 @@ router.get('/test', validateApiKey, (req: Request, res: Response): void => {
 // Protected routes
 router.post('/add-organization', validateApiKey, addOrganization);
 router.delete('/remove-organization/:id', validateApiKey, removeOrganization);
+
+router.get('/search-company', validateApiKey, searchCompany);
 
 export default router;

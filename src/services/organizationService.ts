@@ -14,6 +14,7 @@ export const createOrganization = async (
     contact_person_phone?: string,
     admin_username?: string,
     admin_email?: string,
+    physical_address?: string, // Stored as a json
     insurance_types?: string[],  // Array of insurance types (strings)
     payment_methods?: { method: string; details: object }[] 
 ) => {
@@ -27,15 +28,15 @@ export const createOrganization = async (
             INSERT INTO organizations 
             (legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license, 
             contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_email, contact_person_phone, 
-            admin_username, admin_email, insurance_types, payment_methods) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
+            admin_username, admin_email, physical_address, insurance_types, payment_methods) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
             RETURNING id;
         `;
 
         const orgValues = [
             legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license || null,
             contact_person_first_name, contact_person_last_name, contact_person_role || null, contact_person_email, contact_person_phone,
-            admin_username, admin_email, JSON.stringify(insurance_types),  // Convert insurance_type array to JSON string
+            admin_username, admin_email, JSON.stringify(physical_address), JSON.stringify(insurance_types),  // Convert insurance_type array to JSON string
             JSON.stringify(payment_methods)
         ];
 
