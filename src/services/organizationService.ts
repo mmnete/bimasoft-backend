@@ -44,14 +44,41 @@ export const createOrganization = async (
 
         await client.query('COMMIT'); // Commit transaction
         return { id: organizationId, legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license };
-    } catch (error) {
+    } catch (error: unknown) {  // Use unknown type for error
         await client.query('ROLLBACK'); // Rollback if any query fails
         console.error('Transaction error:', error);
+
+        if (error instanceof Error && error.message) {
+            // Check for unique constraint violation errors based on the unique fields
+            if (error.message.includes('legal_name')) {
+                throw new Error(`Seems like the business '${legal_name}' already exists.`);
+            }
+            if (error.message.includes('brela_number')) {
+                throw new Error(`Seems like the BRELA number '${brela_number}' is already taken.`);
+            }
+            if (error.message.includes('tin_number')) {
+                throw new Error(`Seems like the TIN number '${tin_number}' is already registered.`);
+            }
+            if (error.message.includes('contact_email')) {
+                throw new Error(`An account with the email '${contact_email}' already exists.`);
+            }
+            if (error.message.includes('contact_phone')) {
+                throw new Error(`This contact phone number '${contact_phone}' is already associated with another account.`);
+            }
+            if (error.message.includes('admin_username')) {
+                throw new Error(`The admin username '${admin_username}' is already in use.`);
+            }
+            if (error.message.includes('admin_email')) {
+                throw new Error(`The admin email '${admin_email}' is already registered.`);
+            }
+        }
+
         throw new Error('Failed to create organization');
     } finally {
         client.release();
     }
 };
+
 
 export const deleteOrganization = async (organizationId: number) => {
     const client = await pool.connect();

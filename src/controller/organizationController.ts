@@ -55,7 +55,11 @@ export const addOrganization = async (req: Request, res: Response) => {
          return;
     } catch (error) {
         console.error("Error in addOrganization:", error);
-        res.status(500).json({ success: false, message: "Error creating organization" });
+        var extra_message = '';
+        if (error instanceof Error && error.message) {
+            extra_message = error.message;
+        }
+        res.status(500).json({ success: false, message: "Error creating organization: " + extra_message });
         return;
     }
 };

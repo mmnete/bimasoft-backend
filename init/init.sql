@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS organizations;
 -- Create the simplified 'organizations' table
 CREATE TABLE IF NOT EXISTS organizations (
     id SERIAL PRIMARY KEY,
-    legal_name VARCHAR(255) NOT NULL,
+    legal_name VARCHAR(255) UNIQUE NOT NULL,
     brela_number VARCHAR(255) UNIQUE NOT NULL,
     tin_number VARCHAR(255) UNIQUE NOT NULL,
     contact_email VARCHAR(255) NOT NULL,

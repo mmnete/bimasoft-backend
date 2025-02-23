@@ -6,10 +6,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const routes_1 = __importDefault(require("./routes"));
 const body_parser_1 = __importDefault(require("body-parser"));
+const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
-const port = 3000;
+const port = process.env.PORT || 3000;
+const env = process.env.NODE_ENV || 'development';
+// Allowed Origins
+const allowedOrigins = [
+    'http://localhost:4200', // Local Angular app
+    'https://your-production-domain.com' // Production frontend
+];
+// CORS Middleware
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error('Not allowed by CORS'), false);
+        }
+    }
+};
+app.use((0, cors_1.default)(corsOptions));
 app.use(body_parser_1.default.json()); // For parsing JSON requests
 app.use('/api', routes_1.default);
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+    console.log(`🚀 Server is running on ${env === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'} mode at http://localhost:${port}`);
 });
