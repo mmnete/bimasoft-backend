@@ -1,14 +1,17 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
+// Load environment variables from .env file (only for local development)
 dotenv.config();
 
+// Use DATABASE_URL from Heroku in production
+const databaseUrl = process.env.DATABASE_URL;
+
 const pool = new Pool({
-    user: process.env.POSTGRES_USER as string,
-    host: process.env.POSTGRES_HOST as string,
-    database: process.env.POSTGRES_DB as string,
-    password: process.env.POSTGRES_PASSWORD as string,
-    port: parseInt(process.env.POSTGRES_PORT as string, 10),
+  connectionString: databaseUrl,
+  ssl: {
+    rejectUnauthorized: false, // Necessary for SSL connections on Heroku
+  },
 });
 
 export default pool;
