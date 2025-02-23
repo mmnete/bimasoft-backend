@@ -1,13 +1,26 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { addOrganization, removeOrganization } from './controller/organizationController';
 
 const router = express.Router();
+const API_KEY: string | undefined = process.env.API_KEY;
 
-router.get('/test', (req, res) => {
+// Middleware to validate API key
+const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {
+    const apiKey: string | undefined = req.headers['x-api-key'] as string;
+    if (!apiKey || apiKey !== API_KEY) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+    }
+    next();
+};
+
+// Test route
+router.get('/test', validateApiKey, (req: Request, res: Response): void => {
     res.send('yes');
 });
-router.post('/add-organization', addOrganization);
-// router.post('/update-organization', updateOrganization);
-router.delete('/remove-organization/:id', removeOrganization);
+
+// Protected routes
+router.post('/add-organization', validateApiKey, addOrganization);
+router.delete('/remove-organization/:id', validateApiKey, removeOrganization);
 
 export default router;
