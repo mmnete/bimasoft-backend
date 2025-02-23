@@ -3,6 +3,9 @@ import { addOrganization, removeOrganization } from './controller/organizationCo
 
 const router = express.Router();
 
+router.get('/test', (req, res) => {
+    res.send('yes');
+});
 router.post('/add-organization', addOrganization);
 // router.post('/update-organization', updateOrganization);
 router.delete('/remove-organization/:id', removeOrganization);
