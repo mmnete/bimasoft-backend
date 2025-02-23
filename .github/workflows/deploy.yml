@@ -18,6 +18,10 @@ jobs:
         with:
           node-version: 18 # Adjust to your Node.js version
 
+      - name: Install Heroku CLI
+        run: |
+          curl https://cli-assets.heroku.com/install.sh | sh
+
       - name: Install dependencies
         run: npm install # Or yarn install if using Yarn
 
