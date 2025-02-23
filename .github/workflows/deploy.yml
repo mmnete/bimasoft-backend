@@ -36,6 +36,13 @@ jobs:
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           usedocker: false # Set to true if you're using a Docker container
 
+      - name: Run SQL Script on Database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}  # Assuming DATABASE_URL is stored in GitHub Secrets
+        run: |
+          echo "Running SQL script on database"
+          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h ${{ secrets.POSTGRES_HOST }} -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} -f path/to/your/init.sql
+
       - name: Notify success
         if: success()
         run: echo "Deployment successful! 🚀"
