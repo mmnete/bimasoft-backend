@@ -41,7 +41,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}  # Assuming DATABASE_URL is stored in GitHub Secrets
         run: |
           echo "Running SQL script on database"
-          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h ${{ secrets.POSTGRES_HOST }} -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} -f path/to/your/init.sql
+          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql -h ${{ secrets.POSTGRES_HOST }} -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB }} -f ./init/init.sql
 
       - name: Notify success
         if: success()
