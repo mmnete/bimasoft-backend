@@ -10,7 +10,7 @@ const env = process.env.NODE_ENV || 'development';
 // Allowed Origins
 const allowedOrigins = [
     'http://localhost:4200',  // Local Angular app
-    'https://your-production-domain.com'  // Production frontend
+    'https://bima-soft-93270027ccce.herokuapp.com/'  // Production frontend
 ];
 
 // CORS Middleware
