@@ -1,6 +1,7 @@
 import pool from '../config/db';
 
 export const createOrganization = async (
+    organization_type: string, 
     legal_name: string,
     brela_number: string,
     tin_number: string,
@@ -26,15 +27,15 @@ export const createOrganization = async (
         // Insert organization
         const orgQuery = `
             INSERT INTO organizations 
-            (legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license, 
+            (organization_type, legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license, 
             contact_person_first_name, contact_person_last_name, contact_person_role, contact_person_email, contact_person_phone, 
             admin_username, admin_email, physical_address, insurance_types, payment_methods) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) 
             RETURNING id;
         `;
 
         const orgValues = [
-            legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license || null,
+            organization_type, legal_name, brela_number, tin_number, contact_email, contact_phone, tira_license || null,
             contact_person_first_name, contact_person_last_name, contact_person_role || null, contact_person_email, contact_person_phone,
             admin_username, admin_email, JSON.stringify(physical_address), JSON.stringify(insurance_types),  // Convert insurance_type array to JSON string
             JSON.stringify(payment_methods)
@@ -50,6 +51,9 @@ export const createOrganization = async (
         console.error('Transaction error:', error);
 
         if (error instanceof Error && error.message) {
+            if (error.message.includes('organization_type')) {
+                throw new Error(`Organization type required.`);
+            }
             // Check for unique constraint violation errors based on the unique fields
             if (error.message.includes('legal_name')) {
                 throw new Error(`Seems like the business '${legal_name}' already exists.`);
@@ -77,6 +81,46 @@ export const createOrganization = async (
         throw new Error('Failed to create organization');
     } finally {
         client.release();
+    }
+};
+
+export const logOrganizationMetadata = async (
+    organizationId: number,
+    action: string,
+    modifiedBy: string,
+    ipAddress: string,
+    deviceType: string,
+    operatingSystem: string,
+    browser: string,
+    geolocation: string
+) => {
+    const query = `
+        INSERT INTO organization_metadata 
+        (organization_id, action_type, modified_by, ip_address, device_type, operating_system, browser, geolocation, timestamp)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+    `;
+
+    const client = await pool.connect(); // Acquire a client from the pool
+    try {
+        await client.query('BEGIN'); // Start a transaction
+
+        await client.query(query, [
+            organizationId,
+            action,
+            modifiedBy,
+            ipAddress,
+            deviceType,
+            operatingSystem,
+            browser,
+            geolocation
+        ]);
+
+        await client.query('COMMIT'); // Commit the transaction
+    } catch (error) {
+        await client.query('ROLLBACK'); // Rollback transaction on error
+        console.error("Error logging organization metadata:", error);
+    } finally {
+        client.release(); // Always release the client back to the pool
     }
 };
 

@@ -1,95 +1,44 @@
+import brokersData from '../data/insurance_brokers.json';
+import companiesData from '../data/insurance_companies.json';
 import { Request, Response } from 'express';
-import axios from 'axios';
-import { JSDOM } from 'jsdom';
 
-// Define the company type
 interface Company {
-    name: string;
-    link: string;
-    details?: string;
+    company_name: string; // company name (assuming this is the field you're filtering by)
+    date_of_license: string;
+    number_of_license: string;
+    status: string;
+    country: string;
+    phone: string;
+    email: string;
+    address: string | null;
+    profile_url: string;
+    type?: string; // Optional type for distinguishing brokers vs companies
+    date_of_application?: string; // Optional field, if it exists in some data
+    class_of_business?: string; // Optional field, if it exists in some data
 }
 
-const scrapePage = async (page: number): Promise<Company[]> => {
-    const url = `https://www.tira.go.tz/licensed-entities/insurance-companies?page=${page}`;  // Actual URL
-
-    try {
-        // Fetch the HTML content of the page
-        const { data } = await axios.get(url);
-
-        // Initialize jsdom with the HTML content
-        const dom = new JSDOM(data);
-        const document = dom.window.document;
-
-        // Parse the company details from the page
-        const companies: Company[] = [];
-
-        // Adjust the selector based on the provided HTML structure
-        const companyElements = document.querySelectorAll('div.searchable-record');
-
-        // Assuming companyElements is a NodeListOf<Element> (as returned by querySelectorAll) and companies is an array of { name: string, link: string } objects
-        companyElements.forEach((element: Element) => {
-            const name: string = element.getAttribute('data-name')?.trim() ?? '';  // Get the name from the data-name attribute
-            const link: string = element.querySelector('a')?.getAttribute('href') ?? '';  // Get the link from the <a> tag
-
-            if (name && link) {
-                companies.push({ name, link });
-            }
-        });
-
-        return companies;
-    } catch (error) {
-        console.error('Error scraping page', error);
+// Helper function to read and search for companies from imported data
+function readAndSearchCompanies(companies: any[], queryName: string, type: string): Company[] {
+    if (queryName.toLowerCase().length < 2) {
         return [];
     }
-};
 
+    // Filter companies based on the query name (case insensitive)
+    const matchingCompanies = companies.filter(company => {
+        // Prepare query to lowercase for case-insensitive matching
+        const queryLower = queryName.toLowerCase();
+        const companyNameLower = company.company_name.toLowerCase();
+    
+        // Check if the query matches the company name with handling for prefixes and suffixes
+        return companyNameLower.startsWith(queryLower) || companyNameLower.endsWith(queryLower) || companyNameLower.includes(queryLower);
+    });
 
-// Function to scrape additional details from a company's detail page
-const scrapeCompanyDetails = async (companyUrl: string): Promise<any> => {
-    try {
-        const { data } = await axios.get(companyUrl);
-
-        // Initialize jsdom with the HTML content
-        const dom = new JSDOM(data);
-        const document = dom.window.document;
-
-        // Define an object to store the company details
-        const details: any = {};
-
-        // Query each row of company details
-        const rows = document.querySelectorAll('div.row');
-
-        rows.forEach((row: Element) => {
-            const label = row.querySelector('div.faded')?.textContent?.trim().toLowerCase();
-            const value = row.querySelector('div.text-dark')?.textContent?.trim();
-
-            // Store the label-value pairs in the details object
-            if (label && value) {
-                details[label] = value;
-            }
-        });
-
-        // Return the details object
-        return details;
-    } catch (error) {
-        console.error('Error scraping company details', error);
-        return null;
-    }
-};
-
-
-// Function to scrape multiple pages
-const scrapeAllPages = async (totalPages: number): Promise<Company[]> => {
-    const allCompanies: Company[] = [];
-
-    // Loop through pages 1 to totalPages
-    for (let i = 1; i <= totalPages; i++) {
-        const companies = await scrapePage(i);
-        allCompanies.push(...companies);
-    }
-
-    return allCompanies;
-};
+    // Add the type to the companies for distinguishing between brokers and companies
+    return matchingCompanies.map(company => ({
+        ...company,
+        type: type,  // Add type to the result
+    }));
+}
 
 // API to search companies based on query
 export const searchCompany = async (req: Request, res: Response): Promise<void> => {
@@ -104,21 +53,12 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        // Scrape companies from the first page (you can change this to scrape more if needed)
-        const companies = await scrapeAllPages(5);  // Scrape 5 pages for example
+        // Search in both companies and brokers data
+        const brokerCompanies = readAndSearchCompanies(brokersData, query, 'insurance_broker');
+        const insuranceCompanies = readAndSearchCompanies(companiesData, query, 'insurance_company');
 
-        // Filter companies based on the query
-        const filteredCompanies = companies.filter(company =>
-            company.name.toLowerCase().includes(query.toLowerCase())
-        );
-
-        // Optionally, scrape additional details from the company's detail page
-        for (let company of filteredCompanies) {
-            const details = await scrapeCompanyDetails(company.link);
-            if (details) {
-                company.details = details;  // Add the details to the company object
-            }
-        }
+        // Combine the results from both
+        const filteredCompanies = [...brokerCompanies, ...insuranceCompanies];
 
         res.status(200).json({
             success: true,

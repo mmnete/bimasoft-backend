@@ -8,10 +8,8 @@ dotenv.config();
 const databaseUrl = process.env.DATABASE_URL;
 
 const pool = new Pool({
-  connectionString: databaseUrl,
-  ssl: {
-    rejectUnauthorized: false, // Necessary for SSL connections on Heroku
-  },
+    connectionString: process.env.DATABASE_URL || '',
+    ssl: false
 });
 
 export default pool;

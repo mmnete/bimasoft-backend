@@ -1,9 +1,30 @@
 import { Request, Response } from 'express';
-import { createOrganization, deleteOrganization } from '../services/organizationService';
+import requestIp from 'request-ip';
+import useragent from 'useragent';
+import { createOrganization, logOrganizationMetadata, deleteOrganization } from '../services/organizationService';
+import axios from 'axios';
+import { sendWelcomeEmail } from '../services/emailService';
+
+export const getGeolocation = async (req: Request): Promise<string> => {
+    try {
+        const clientIp = requestIp.getClientIp(req) || 'Unknown IP';
+        if (clientIp === 'Unknown IP') return 'Unknown Location';
+
+        const response = await axios.get(`http://ip-api.com/json/${clientIp}`);
+        if (response.data.status === 'success') {
+            return `${response.data.country}, ${response.data.city}`;
+        }
+        return 'Unknown Location';
+    } catch (error) {
+        console.error('Error fetching geolocation:', error);
+        return 'Unknown Location';
+    }
+};
 
 export const addOrganization = async (req: Request, res: Response) => {
     try {
         const {
+            organization_type,
             legal_name,
             brela_number,
             tin_number,
@@ -19,7 +40,8 @@ export const addOrganization = async (req: Request, res: Response) => {
             admin_email,
             physical_address,
             insurance_types,
-            payment_methods
+            payment_methods,
+            geolocation,
         } = req.body;
 
         // Ensure insurance_type and payment_method are arrays
@@ -35,6 +57,7 @@ export const addOrganization = async (req: Request, res: Response) => {
 
         // Call service function to create organization
         const newOrg = await createOrganization(
+            organization_type,
             legal_name,
             brela_number,
             tin_number,
@@ -52,6 +75,28 @@ export const addOrganization = async (req: Request, res: Response) => {
             insurance_types,
             payment_methods
         );
+
+        // Capture metadata
+        const clientIp = requestIp.getClientIp(req) || 'Unknown IP';
+        const agent = useragent.parse(req.headers['user-agent']);
+        const deviceType = agent.device.toString() || 'Unknown Device';
+        const operatingSystem = agent.os.toString() || 'Unknown OS';
+        const browser = agent.family || 'Unknown Browser';
+
+        // Log metadata
+        await logOrganizationMetadata(
+            newOrg.id,
+            'created',
+            admin_username,
+            clientIp,
+            deviceType,
+            operatingSystem,
+            browser,
+            geolocation
+        );
+
+        // await sendWelcomeEmail(contact_email, legal_name);
+        await sendWelcomeEmail(admin_email, legal_name);
 
          res.status(201).json({ success: true, data: newOrg });
          return;
