@@ -1,25 +1,13 @@
 import { Request, Response } from 'express';
 import requestIp from 'request-ip';
 import useragent from 'useragent';
-import { createOrganization, logOrganizationMetadata, deleteOrganization } from '../services/organizationService';
-import axios from 'axios';
-import { sendWelcomeEmail } from '../services/emailService';
+import { approveCompany, createOrganization, fetchPendingCompaniesQuery, logOrganizationMetadata, deleteOrganization } from '../services/organizationService';
+import { sendWelcomeEmail, sendPasswordEmail } from '../services/emailService';
+import { createAccount } from '../services/firestoreService';
+import * as dotenv from 'dotenv';
 
-export const getGeolocation = async (req: Request): Promise<string> => {
-    try {
-        const clientIp = requestIp.getClientIp(req) || 'Unknown IP';
-        if (clientIp === 'Unknown IP') return 'Unknown Location';
-
-        const response = await axios.get(`http://ip-api.com/json/${clientIp}`);
-        if (response.data.status === 'success') {
-            return `${response.data.country}, ${response.data.city}`;
-        }
-        return 'Unknown Location';
-    } catch (error) {
-        console.error('Error fetching geolocation:', error);
-        return 'Unknown Location';
-    }
-};
+// Load environment variables from .env file
+dotenv.config();
 
 export const addOrganization = async (req: Request, res: Response) => {
     try {
@@ -30,13 +18,10 @@ export const addOrganization = async (req: Request, res: Response) => {
             tin_number,
             contact_email,
             contact_phone,
+            company_details_url,
             tira_license,
-            contact_person_first_name,
-            contact_person_last_name,
-            contact_person_role,
-            contact_person_email,
-            contact_person_phone,
-            admin_username,
+            admin_first_name,
+            admin_last_name,
             admin_email,
             physical_address,
             insurance_types,
@@ -46,13 +31,13 @@ export const addOrganization = async (req: Request, res: Response) => {
 
         // Ensure insurance_type and payment_method are arrays
         if (!Array.isArray(insurance_types)) {
-          res.status(400).json({ success: false, message: 'insurance_types must be an array of strings.' });
-          return;
+            res.status(400).json({ success: false, message: 'insurance_types must be an array of strings.' });
+            return;
         }
 
         if (!Array.isArray(payment_methods)) {
-         res.status(400).json({ success: false, message: 'payment_methods must be an array of payment details objects.' });
-         return;
+            res.status(400).json({ success: false, message: 'payment_methods must be an array of payment details objects.' });
+            return;
         }
 
         // Call service function to create organization
@@ -63,13 +48,10 @@ export const addOrganization = async (req: Request, res: Response) => {
             tin_number,
             contact_email,
             contact_phone,
+            company_details_url,
             tira_license,
-            contact_person_first_name,
-            contact_person_last_name,
-            contact_person_role,
-            contact_person_email,
-            contact_person_phone,
-            admin_username,
+            admin_first_name,
+            admin_last_name,
             admin_email,
             physical_address,
             insurance_types,
@@ -87,7 +69,7 @@ export const addOrganization = async (req: Request, res: Response) => {
         await logOrganizationMetadata(
             newOrg.id,
             'created',
-            admin_username,
+            admin_first_name + " " + admin_last_name,
             clientIp,
             deviceType,
             operatingSystem,
@@ -95,11 +77,21 @@ export const addOrganization = async (req: Request, res: Response) => {
             geolocation
         );
 
-        // await sendWelcomeEmail(contact_email, legal_name);
         await sendWelcomeEmail(admin_email, legal_name);
 
-         res.status(201).json({ success: true, data: newOrg });
-         return;
+        const newAccountDetails = await createAccount(newOrg.id, admin_email);
+
+        // Check if account creation was successful
+        if (newAccountDetails) {
+            const { userCredential, password } = newAccountDetails;
+            // Now you can send the password to the user via email
+            await sendPasswordEmail(admin_email, password, process.env.BASE_URL + '/authentication/login');
+        } else {
+            console.error('Failed to create account');
+        }
+
+        res.status(201).json({ success: true, data: newOrg });
+        return;
     } catch (error) {
         console.error("Error in addOrganization:", error);
         var extra_message = '';
@@ -144,3 +136,59 @@ export const removeOrganization = async (req: Request, res: Response) => {
     }
 };
 
+export const approveNewCompany = async (req: Request, res: Response) => {
+    try {
+        const {
+            organization_id,
+            dev_password
+        } = req.body;
+    
+        // Check if the dev password is correct
+        if (String(process.env.DEV_PASS) !== dev_password) {
+            res.status(401).json({ // 401 Unauthorized for wrong password
+                success: false,
+                message: "Incorrect dev password!",
+            });
+            return;
+        }
+
+        const organizationId = parseInt(organization_id, 10);
+
+        // Validate if the organizationId is valid
+        if (isNaN(organizationId)) {
+            res.status(400).json({
+                success: false,
+                message: "Invalid organization ID",
+            });
+            return;
+        }
+
+        // Call the service function to delete the organization
+        const result = await approveCompany(organizationId);
+
+        // Check if the deletion was successful and respond accordingly
+        res.status(200).json({
+            success: true,
+            message: `Organization with ID ${result.company.id} has been approved.`,
+            data: { id: result.company.id },
+        });
+        return;
+    } catch (error) {
+        console.error("Error in approving company:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error approving company",
+        });
+        return;
+    }
+};
+
+export const fetchPendingCompanies = async (req: Request, res: Response) => {
+    try {
+        const pendingCompanyDetails = await fetchPendingCompaniesQuery();
+        res.json(pendingCompanyDetails);
+    } catch (error) {
+        console.error("Error fetching pending companies:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};

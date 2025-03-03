@@ -11,20 +11,22 @@ const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
 const env = process.env.NODE_ENV || 'development';
 // Allowed Origins
-const allowedOrigins = [
-    'http://localhost:4200', // Local Angular app
-    'https://your-production-domain.com' // Production frontend
-];
-// CORS Middleware
+// const allowedOrigins = [
+//     'http://localhost:4200',  // Local Angular app
+//     'https://bima-soft-93270027ccce.herokuapp.com/'  // Production frontend
+// ];
+// // CORS Middleware
+// const corsOptions: CorsOptions = {
+//     origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
+//         if (!origin || allowedOrigins.includes(origin)) {
+//             callback(null, true);
+//         } else {
+//             callback(new Error('Not allowed by CORS'), false);
+//         }
+//     }
+// };
 const corsOptions = {
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        }
-        else {
-            callback(new Error('Not allowed by CORS'), false);
-        }
-    }
+    origin: true, // Allow all origins
 };
 app.use((0, cors_1.default)(corsOptions));
 app.use(body_parser_1.default.json()); // For parsing JSON requests

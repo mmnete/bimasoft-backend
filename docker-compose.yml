@@ -17,7 +17,7 @@ services:
 
   backend:
     user: node
-    image: node:16 # Replace with your preferred Node.js version
+    image: node:20
     container_name: bimasoft-backend
     working_dir: /usr/src/app
     volumes:
