@@ -9,6 +9,7 @@ export const createOrganization = async (
     contact_phone: string,
     company_details_url: string,
     tira_license?: string,
+    admin_firebase_uid?: string,
     admin_first_name?: string,
     admin_last_name?: string,
     admin_email?: string,
@@ -58,6 +59,7 @@ export const createOrganization = async (
         if (admin_email) {
             await createUserDetails(
                 client,
+                admin_firebase_uid || "",
                 admin_first_name || "",
                 admin_last_name || "",
                 admin_email,
@@ -126,6 +128,7 @@ export const createOrganization = async (
 
 export const createUserDetails = async (
     client: any, // Using the same client to ensure transaction consistency
+    firebaseUid: string,
     firstName: string,
     lastName: string,
     email: string,
@@ -134,12 +137,13 @@ export const createUserDetails = async (
 ) => {
     const userQuery = `
         INSERT INTO users 
-        (first_name, last_name, email, phone_number, role, organization_id) 
-        VALUES ($1, $2, $3, $4, $5, $6) 
+        (firebase_uid, first_name, last_name, email, phone_number, role, organization_id) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) 
         RETURNING id;
     `;
 
     const userValues = [
+        firebaseUid, 
         firstName, // Assuming first name is the first part of username
         lastName, // Assuming last name is the second part of username
         email,
@@ -152,6 +156,31 @@ export const createUserDetails = async (
     const userId = userResult.rows[0].id;
 
     console.log(`User with ID: ${userId} created`);
+};
+
+export const getOrganizationIdByEmail = async (email: string): Promise<number | null> => {
+    const query = `
+        SELECT organization_id 
+        FROM users 
+        WHERE email = $1
+    `;
+
+    const client = await pool.connect(); // Acquire a client from the pool
+    try {
+        const result = await client.query(query, [email]); // Query for the organization_id
+        if (result.rows.length === 0) {
+            console.error('No user found with this email');
+            return null;
+        }
+
+        // Return the organization_id
+        return result.rows[0].organization_id;
+    } catch (error) {
+        console.error('Error querying the database:', error);
+        return null; // Return null in case of error
+    } finally {
+        client.release(); // Always release the client back to the pool
+    }
 };
 
 export const logOrganizationMetadata = async (
@@ -289,5 +318,80 @@ export const approveCompany = async (companyId: number) => {
         client.release(); // Release the DB connection
     }
 };
+
+
+export const addCustomerAndLinkToOrganization = async (
+    firstName: string,
+    lastName: string,
+    gender: string,
+    maritalStatus: string,
+    physicalAddress: string,
+    nationalId: string,
+    driversLicense: string,
+    passportNumber: string | null,
+    email: string | null,
+    phoneNumber: string | null,
+    organizationId: number
+) => {
+    const queryCustomer = `
+        INSERT INTO customers
+        (first_name, last_name, gender, marital_status, physical_address, national_id, drivers_license, passport_number, email, phone_number, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        RETURNING id;  -- Returning the id of the newly created customer
+    `;
+
+    // first_name VARCHAR(255) NOT NULL,
+    // last_name VARCHAR(255) NOT NULL,
+    // physical_address VARCHAR(255) NOT NULL,
+    // national_id VARCHAR(255) NOT NULL,
+    // drivers_license VARCHAR(255) NOT NULL,
+    // passport_number VARCHAR(255),
+    // email VARCHAR(255),
+    // phone_number VARCHAR(50),
+    // created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    // updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    
+    const queryCustomerOrganization = `
+        INSERT INTO customers_organizations
+        (customer_id, organization_id)
+        VALUES ($1, $2);
+    `;
+
+    const client = await pool.connect(); // Acquire a client from the pool
+    try {
+        await client.query("BEGIN"); // Start a transaction
+
+        // Insert customer details into the customers table and retrieve the id
+        const result = await client.query(queryCustomer, [
+            firstName,
+            lastName,
+            gender,
+            maritalStatus,
+            physicalAddress,
+            nationalId,
+            driversLicense,
+            passportNumber,
+            email,
+            phoneNumber
+        ]);
+        const customerId = result.rows[0].id; // Get the id of the newly inserted customer
+
+        // Insert the customer-organization relationship into the customers_organizations table
+        await client.query(queryCustomerOrganization, [
+            customerId,
+            String(organizationId)
+        ]);
+
+        await client.query("COMMIT"); // Commit the transaction
+        return { success: true, customerId }; // Return success along with the new customer ID
+    } catch (error) {
+        await client.query("ROLLBACK"); // Rollback transaction on error
+        console.error("Error adding customer and linking to organization:", error);
+        return { success: false, error: 'Could not create customer' }; // Return failure and the error message
+    } finally {
+        client.release(); // Always release the client back to the pool
+    }
+};
+
 
 

@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import requestIp from 'request-ip';
 import useragent from 'useragent';
-import { approveCompany, createOrganization, fetchPendingCompaniesQuery, logOrganizationMetadata, deleteOrganization } from '../services/organizationService';
+import { getOrganizationIdByEmail, addCustomerAndLinkToOrganization, approveCompany, createOrganization, fetchPendingCompaniesQuery, logOrganizationMetadata, deleteOrganization } from '../services/organizationService';
 import { sendWelcomeEmail, sendPasswordEmail } from '../services/emailService';
-import { createAccount } from '../services/firestoreService';
+import { createAccount, login, logout, isUserLoggedIn } from '../services/firestoreService';
 import * as dotenv from 'dotenv';
 
 // Load environment variables from .env file
@@ -40,6 +40,31 @@ export const addOrganization = async (req: Request, res: Response) => {
             return;
         }
 
+        const newfirebaseAccountDetails = await createAccount(admin_email);
+
+        let userCredential = null;
+        let adminFirebaseUid = '';
+        let new_password = '';
+
+        if (newfirebaseAccountDetails) {
+            // Destructure the userCredential and password from newfirebaseAccountDetails
+            const { userCredential, password } = newfirebaseAccountDetails;
+
+            // Check if userCredential exists before accessing uid
+            if (userCredential) {
+                adminFirebaseUid = userCredential.user.uid;
+                new_password = password;
+            } else {
+                // Handle the case where userCredential is missing
+                res.status(400).json({ success: false, message: 'User credential is missing.' });
+                return;
+            }
+        } else {
+            res.status(400).json({ success: false, message: 'Failed to create firebase account.' });
+            return;
+        }
+
+
         // Call service function to create organization
         const newOrg = await createOrganization(
             organization_type,
@@ -50,6 +75,7 @@ export const addOrganization = async (req: Request, res: Response) => {
             contact_phone,
             company_details_url,
             tira_license,
+            adminFirebaseUid,
             admin_first_name,
             admin_last_name,
             admin_email,
@@ -79,13 +105,9 @@ export const addOrganization = async (req: Request, res: Response) => {
 
         await sendWelcomeEmail(admin_email, legal_name);
 
-        const newAccountDetails = await createAccount(newOrg.id, admin_email);
-
         // Check if account creation was successful
-        if (newAccountDetails) {
-            const { userCredential, password } = newAccountDetails;
-            // Now you can send the password to the user via email
-            await sendPasswordEmail(admin_email, password, process.env.BASE_URL + '/authentication/login');
+        if (new_password) {
+            await sendPasswordEmail(admin_email, new_password, process.env.BASE_URL + '/authentication/login');
         } else {
             console.error('Failed to create account');
         }
@@ -142,7 +164,7 @@ export const approveNewCompany = async (req: Request, res: Response) => {
             organization_id,
             dev_password
         } = req.body;
-    
+
         // Check if the dev password is correct
         if (String(process.env.DEV_PASS) !== dev_password) {
             res.status(401).json({ // 401 Unauthorized for wrong password
@@ -192,3 +214,152 @@ export const fetchPendingCompanies = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const logUserIn = async (req: Request, res: Response) => {
+    try {
+        // Extract email and password from the request body
+        const { email, password } = req.body;
+
+        // Validate input
+        if (!email || !password) {
+            res.status(400).json({ message: 'Email and password are required' });
+            return;
+        }
+
+        // Call the login function
+        const result = await login(email, password);
+
+        // Check if login was successful
+        if (!result) {
+            res.status(401).json({ message: 'Invalid email or password' });
+            return;
+        }
+
+        const organizationId = await getOrganizationIdByEmail(email);
+
+        if (!organizationId) {
+            res.status(401).json({ message: 'Invalid organization id' });
+            return;
+        }
+
+        // Send back the user data and token
+        res.status(200).json({
+            message: 'Login successful',
+            user: {
+                uid: result.userCredential.user.uid,
+                email: result.userCredential.user.email,
+                organization_id: organizationId,
+            },
+            token: result.token, // Send the authentication token
+        });
+        return;
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
+};
+
+// Function to handle user logout
+export const logUserOut = async (req: Request, res: Response) => {
+    try {
+        // Extract the email from the request body
+        const { email } = req.body;
+
+        // Validate email input
+        if (!email) {
+            res.status(400).json({ message: 'Email is required' });
+            return;
+        }
+
+        await logout(email);
+
+        // Send back a success response
+        res.status(200).json({
+            message: 'Logout successful',
+        });
+
+        return;
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+
+        return;
+    }
+};
+
+
+// Middleware to verify if the user is logged in
+export const verifyUserLoggedIn = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Get the token from the Authorization header (usually as Bearer token)
+        const token = req.headers.authorization?.split(' ')[1]; // Assumes token is sent as 'Bearer <token>'
+
+        if (!token) {
+            res.status(401).json({ message: 'No token provided' });
+            return;
+        }
+
+        // Verify the token using the isUserLoggedIn function
+        const user = await isUserLoggedIn(token);
+
+        if (!user) {
+            res.status(401).json({ message: 'Invalid or expired token' });
+            return;
+        }
+
+        next(); // Proceed to the next middleware or route handler
+    } catch (error) {
+        console.error('Token verification error:', error);
+        res.status(401).json({ message: 'Invalid or expired token' });
+        return;
+    }
+};
+
+export const addCustomer = async (req: Request, res: Response) => {
+    try {
+        const {
+            first_name,
+            last_name,
+            gender,
+            marital_status,
+            physical_address,
+            national_id,
+            drivers_license,
+            passport_number,
+            email,
+            phone_number,
+            organization_id
+        } = req.body;
+
+        // Call service function to create organization
+        const newCustomer = await addCustomerAndLinkToOrganization(
+            first_name,
+            last_name,
+            gender,
+            marital_status,
+            physical_address,
+            national_id,
+            drivers_license,
+            passport_number,
+            email,
+            phone_number,
+            organization_id
+        );
+
+        // Send some emails here.
+
+        res.status(201).json({ success: true, data: newCustomer });
+        return;
+    } catch (error) {
+        console.error("Error in addCustomer:", error);
+        var extra_message = '';
+        if (error instanceof Error && error.message) {
+            extra_message = error.message;
+        }
+        res.status(500).json({ success: false, message: "Error creating organization: " + extra_message });
+        return;
+    }
+};
+
+
