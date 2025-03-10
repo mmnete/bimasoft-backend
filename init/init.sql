@@ -27,8 +27,7 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     firebase_uid VARCHAR(255) NOT NULL,
-    first_name VARCHAR(255) NOT NULL,
-    last_name VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone_number VARCHAR(50),
     role VARCHAR(50) CHECK (role IN ('admin', 'broker_agent', 'company_agent')) NOT NULL,
@@ -55,8 +54,7 @@ CREATE TABLE IF NOT EXISTS organization_metadata (
 
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
-    first_name VARCHAR(255) NOT NULL,
-    last_name VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
     gender VARCHAR(255) NOT NULL,
     marital_status VARCHAR(255) NOT NULL,
     physical_address VARCHAR(255) NOT NULL,

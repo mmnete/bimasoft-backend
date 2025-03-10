@@ -20,8 +20,7 @@ export const addOrganization = async (req: Request, res: Response) => {
             contact_phone,
             company_details_url,
             tira_license,
-            admin_first_name,
-            admin_last_name,
+            admin_full_name,
             admin_email,
             physical_address,
             insurance_types,
@@ -76,8 +75,7 @@ export const addOrganization = async (req: Request, res: Response) => {
             company_details_url,
             tira_license,
             adminFirebaseUid,
-            admin_first_name,
-            admin_last_name,
+            admin_full_name,
             admin_email,
             physical_address,
             insurance_types,
@@ -95,7 +93,7 @@ export const addOrganization = async (req: Request, res: Response) => {
         await logOrganizationMetadata(
             newOrg.id,
             'created',
-            admin_first_name + " " + admin_last_name,
+            admin_full_name,
             clientIp,
             deviceType,
             operatingSystem,
@@ -319,8 +317,7 @@ export const verifyUserLoggedIn = async (req: Request, res: Response, next: Next
 export const addCustomer = async (req: Request, res: Response) => {
     try {
         const {
-            first_name,
-            last_name,
+            full_name,
             gender,
             marital_status,
             physical_address,
@@ -334,8 +331,7 @@ export const addCustomer = async (req: Request, res: Response) => {
 
         // Call service function to create organization
         const newCustomer = await addCustomerAndLinkToOrganization(
-            first_name,
-            last_name,
+            full_name,
             gender,
             marital_status,
             physical_address,

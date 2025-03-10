@@ -10,8 +10,7 @@ export const createOrganization = async (
     company_details_url: string,
     tira_license?: string,
     admin_firebase_uid?: string,
-    admin_first_name?: string,
-    admin_last_name?: string,
+    admin_full_name?: string,
     admin_email?: string,
     physical_address?: string, // Stored as a json
     insurance_types?: string[], // Array of insurance types (strings)
@@ -60,8 +59,7 @@ export const createOrganization = async (
             await createUserDetails(
                 client,
                 admin_firebase_uid || "",
-                admin_first_name || "",
-                admin_last_name || "",
+                admin_full_name || "",
                 admin_email,
                 organizationId,
                 "admin"
@@ -129,23 +127,21 @@ export const createOrganization = async (
 export const createUserDetails = async (
     client: any, // Using the same client to ensure transaction consistency
     firebaseUid: string,
-    firstName: string,
-    lastName: string,
+    fullName: string,
     email: string,
     organizationId: number,
     role: string
 ) => {
     const userQuery = `
         INSERT INTO users 
-        (firebase_uid, first_name, last_name, email, phone_number, role, organization_id) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7) 
+        (firebase_uid, full_name, email, phone_number, role, organization_id) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
         RETURNING id;
     `;
 
     const userValues = [
         firebaseUid, 
-        firstName, // Assuming first name is the first part of username
-        lastName, // Assuming last name is the second part of username
+        fullName, // Assuming first name is the first part of username
         email,
         "555-0000", // Placeholder phone number
         role,
@@ -321,8 +317,7 @@ export const approveCompany = async (companyId: number) => {
 
 
 export const addCustomerAndLinkToOrganization = async (
-    firstName: string,
-    lastName: string,
+    fullName: string,
     gender: string,
     maritalStatus: string,
     physicalAddress: string,
@@ -335,21 +330,10 @@ export const addCustomerAndLinkToOrganization = async (
 ) => {
     const queryCustomer = `
         INSERT INTO customers
-        (first_name, last_name, gender, marital_status, physical_address, national_id, drivers_license, passport_number, email, phone_number, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        (full_name, gender, marital_status, physical_address, national_id, drivers_license, passport_number, email, phone_number, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
         RETURNING id;  -- Returning the id of the newly created customer
     `;
-
-    // first_name VARCHAR(255) NOT NULL,
-    // last_name VARCHAR(255) NOT NULL,
-    // physical_address VARCHAR(255) NOT NULL,
-    // national_id VARCHAR(255) NOT NULL,
-    // drivers_license VARCHAR(255) NOT NULL,
-    // passport_number VARCHAR(255),
-    // email VARCHAR(255),
-    // phone_number VARCHAR(50),
-    // created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    // updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     
     const queryCustomerOrganization = `
         INSERT INTO customers_organizations
@@ -363,8 +347,7 @@ export const addCustomerAndLinkToOrganization = async (
 
         // Insert customer details into the customers table and retrieve the id
         const result = await client.query(queryCustomer, [
-            firstName,
-            lastName,
+            fullName,
             gender,
             maritalStatus,
             physicalAddress,

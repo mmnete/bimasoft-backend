@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { approveNewCompany, addCustomer, addOrganization, fetchPendingCompanies, removeOrganization, logUserIn, logUserOut, verifyUserLoggedIn  } from './controller/organizationController';
 import { searchCompany } from './controller/scrapeCompanies';
+import { verifyVehicleInsurance  } from './controller/insuranceController';
 
 const router = express.Router();
 const API_KEY: string | undefined = process.env.API_KEY;
@@ -33,5 +34,7 @@ router.post('/logout', validateApiKey, logUserOut);
 router.get('/check-logged-in', validateApiKey, verifyUserLoggedIn, (req: Request, res: Response) => {
     res.status(200).json({ message: 'User is logged in' });
 });
+// Insurance services
+router.post('/verify-motor', validateApiKey, verifyVehicleInsurance);
 
 export default router;
