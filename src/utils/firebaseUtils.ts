@@ -1,13 +1,13 @@
+// src/utils/firebaseUtils.ts
 import { initializeApp, getApps } from 'firebase/app';
-import { 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
     UserCredential,
     getAuth as getClientAuth
 } from 'firebase/auth';
 import { UserRecord, getAuth as getAdminAuth } from 'firebase-admin/auth';
 
-// Firebase configuration using environment variables
 const firebaseConfig = {
     apiKey: process.env.FIREBASE_API_KEY,
     authDomain: process.env.FIREBASE_AUTH_DOMAIN,
@@ -17,42 +17,35 @@ const firebaseConfig = {
     appId: process.env.FIREBASE_APP_ID,
 };
 
-// Ensure Firebase is initialized
-// const admin_auth = getAdminAuth(app);
-
-// Utility function to generate a random password
-const generatePassword = (length: number = 7): string => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        password += characters[randomIndex];
-    }
-    return password;
-};
-
-// Service function to create Firebase account
-export const createAccount = async (email: string): Promise<{ userCredential: UserCredential | null, password: string } | null> => {
+/**
+ * Create a Firebase user account
+ * @param email - User email
+ * @param password - User password
+ * @returns Firebase user record
+ */
+export const createFirebaseUser = async (email: string, password: string): Promise<UserCredential | null> => {
     try {
 
         const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-        // const client_auth = getClientAuth(app);
-        // Generate a random password
-        const password = generatePassword();
 
         // Create the user with email and password
         const userCredential = await createUserWithEmailAndPassword(getClientAuth(), email, password);
 
         // Return the user credentials along with the generated password
-        return { userCredential, password };
+        return userCredential;
     } catch (error) {
         console.error('Error creating Firebase account:', error);
         return null;
     }
 };
 
-// Service function to log in the user
-export const login = async (email: string, password: string): Promise<{ userCredential: UserCredential, token: string } | null> => {
+/**
+ * Log in a user using Firebase Authentication
+ * @param email - User email
+ * @param password - User password
+ * @returns Firebase ID token
+ */
+export const loginUser = async (email: string, password: string): Promise<{ userCredential: UserCredential, token: string } | null> => {
     try {
 
         const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
@@ -70,7 +63,7 @@ export const login = async (email: string, password: string): Promise<{ userCred
     }
 };
 
-export const logout = async (email: string): Promise<void> => {
+export const logoutUser = async (email: string): Promise<void> => {
     try {
         const userRecord = await getAdminAuth().getUserByEmail(email);
         await getAdminAuth().revokeRefreshTokens(userRecord.uid);
@@ -81,7 +74,7 @@ export const logout = async (email: string): Promise<void> => {
     }
 };
 
-export const isUserLoggedIn = async (token: string): Promise<UserRecord | null> => {
+export const checkUserLoggedIn  = async (token: string): Promise<UserRecord | null> => {
     try {
         const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
         // Verify the ID token using Firebase Admin SDK

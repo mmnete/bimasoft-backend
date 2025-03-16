@@ -31,7 +31,7 @@ const corsOptions: CorsOptions = {
 app.use(cors(corsOptions));
 
 app.use(bodyParser.json()); // For parsing JSON requests
-app.use('/api', router);
+app.use(router); // Remove '/api' prefix
 
 app.listen(port, () => {
     console.log(`🚀 Server is running on ${env === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'} mode at http://localhost:${port}`);

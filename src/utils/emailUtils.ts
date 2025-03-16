@@ -3,10 +3,12 @@ import * as dotenv from 'dotenv';
 
 // Load environment variables from .env file
 dotenv.config();
+
 // Initialize SendGrid with your API key
 sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
 
 const SENDER_EMAIL = 'mnetemohamed@gmail.com';
+const LOGIN_URL = 'bimasoft.com/auth/login';
 
 export async function sendWelcomeEmail(userEmail: string, userName: string): Promise<void> {
     const msg = {
@@ -89,14 +91,14 @@ Bimasoft Team`,
 
 
 // Function to send the password email to the user with login details
-export async function sendPasswordEmail(userEmail: string, password: string, loginLink: string): Promise<void> {
+export async function sendPasswordEmail(userEmail: string, password: string): Promise<void> {
     const msg = {
         to: userEmail,
         from: SENDER_EMAIL,  // Your email
         subject: 'Welcome to BimaSoft! Login details',
-        text: `Your custom password is: ${password}. You can log in using the following link: ${loginLink}. Once logged in, you can change your password from your account settings.`,
+        text: `Your custom password is: ${password}. You can log in using the following link: ${LOGIN_URL}. Once logged in, you can change your password from your account settings.`,
         html: `<p>Your custom password is: <strong>${password}</strong>.</p>
-               <p>You can log in using the following link: <a href="${loginLink}">${loginLink}</a></p>
+               <p>You can log in using the following link: <a href="${LOGIN_URL}">${LOGIN_URL}</a></p>
                <p>Once logged in, you can change your password from your account settings.</p>`,
     };
 

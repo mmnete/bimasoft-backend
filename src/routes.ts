@@ -1,40 +1,22 @@
-import express, { Request, Response, NextFunction } from 'express';
-import { approveNewCompany, addCustomer, addOrganization, fetchPendingCompanies, removeOrganization, logUserIn, logUserOut, verifyUserLoggedIn  } from './controller/organizationController';
-import { searchCompany } from './controller/scrapeCompanies';
-import { verifyVehicleInsurance  } from './controller/insuranceController';
+// src/routes/index.ts
+
+import express from 'express';
+import companyRoutes from './companyRoutes'; // Import the companyRoutes
+import userRoutes from './userRoutes';
+import motorRoutes from './motorRoutes';
+import { validateApiKey } from './authMiddleware';
 
 const router = express.Router();
-const API_KEY: string | undefined = process.env.API_KEY;
 
-// Middleware to validate API key
-const validateApiKey = (req: Request, res: Response, next: NextFunction): void => {
-    const apiKey: string | undefined = req.headers['x-api-key'] as string;
-    if (!apiKey || apiKey !== API_KEY) {
-        res.status(403).json({ message: 'Forbidden' });
-        return;
-    }
-    next();
-};
+// Mount companyRoutes under /api/v1
+router.use('/api/v1', companyRoutes);
+router.use('/api/v1', motorRoutes);
+router.use('/api/v1', userRoutes);
 
 // Test route
-router.get('/test', validateApiKey, (req: Request, res: Response): void => {
+router.get('/test', validateApiKey, (req, res) => {
     res.send('yes');
 });
-router.get('/pending-companies', validateApiKey, fetchPendingCompanies);
-router.post('/approve-company', validateApiKey, approveNewCompany);
-// Protected routes
-router.post('/add-customer', validateApiKey, addCustomer);
-router.post('/add-organization', validateApiKey, addOrganization);
-router.delete('/remove-organization/:id', validateApiKey, removeOrganization);
-router.get('/search-company', validateApiKey, searchCompany);
-// New Endpoint for User Login (POST)
-router.post('/login', validateApiKey, logUserIn); // This is the login endpoint
-router.post('/logout', validateApiKey, logUserOut);
-// New Endpoint for Checking if User is Logged In (GET)
-router.get('/check-logged-in', validateApiKey, verifyUserLoggedIn, (req: Request, res: Response) => {
-    res.status(200).json({ message: 'User is logged in' });
-});
-// Insurance services
-router.post('/verify-motor', validateApiKey, verifyVehicleInsurance);
 
+// // Export the main router
 export default router;

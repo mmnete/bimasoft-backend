@@ -30,7 +30,7 @@ const corsOptions = {
 };
 app.use((0, cors_1.default)(corsOptions));
 app.use(body_parser_1.default.json()); // For parsing JSON requests
-app.use('/api', routes_1.default);
+app.use(routes_1.default); // Remove '/api' prefix
 app.listen(port, () => {
     console.log(`🚀 Server is running on ${env === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'} mode at http://localhost:${port}`);
 });
